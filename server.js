@@ -1,36 +1,58 @@
 const express = require("express");
-const morgan = require("morgan");
+
+const path = require("path");
+const multer = require("multer");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const colors = require("colors");
 const dotenv = require("dotenv");
-const connectDB = require("./config/db");
-const errorHandler = require("./middlewares/errorMiddleware");
-
-//routes path
-const authRoutes = require("./routes/authRoutes");
-
-//dotenv
 dotenv.config();
 
-//mongo connection
-connectDB();
 
-//rest object
+
+
+
+
+
+
+
+
+
 const app = express();
+const PORT = process.env.PORT || 8000;
+// const upload = multer({dest:"uploads/"})
 
-//middlewares
-app.use(cors());
+app.set("view engine", "ejs");
+app.set("views",path.resolve("./views"));
 app.use(express.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(morgan("dev"));
-app.use(errorHandler);
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(cors())
 
 
-const PORT = process.env.PORT || 8080;
 
-//API routes
-app.use("/api/v1/auth", authRoutes);
+
+const storage = multer.diskStorage({
+  destination:function(req,file,cb){
+    return cb(null,'./uploads')
+  },
+  filename:function(req,file,cb){
+    return cb(null,`${Date.now()}-${file.originalname}`)
+  }
+});
+
+const upload = multer({storage})
+
+
+
+app.post("/upload", upload.single("file"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ success: false, message: "No file uploaded." });
+  }
+  console.log("Uploaded file:", req.file);
+  return res.status(200).json({ success: true, message: "File uploaded successfully!" });
+});
+
+
 
 
 //listen server
@@ -41,3 +63,7 @@ app.listen(PORT, () => {
   );
   console.log();
 });
+
+
+
+
