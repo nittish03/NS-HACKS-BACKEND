@@ -1,5 +1,5 @@
 {
-  "name": "NS-HACKS-BACKEND",
+  "name": "ns-hacks-backend",
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
