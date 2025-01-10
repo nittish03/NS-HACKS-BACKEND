@@ -111,6 +111,20 @@ console.log(e)
 })
 
 
+const documentAi = require("./documentAi.js");
+app.post("/document",async(req,res)=>{
+  const response = await documentAi("./uploads/1736515617958-WhatsApp Image 2025-01-10 at 17.35.49_5cad9f95.jpg").then((result) => {
+    		fs.writeFile(
+    			"./output.txt",
+    			`${result}\n\n\t\t\t- - Document AI extraction output - - \n`
+    		);
+    	})
+    	.catch((error) => {
+    		console.log("error occured while extracting via document AI... :", error);
+    	});
+      res.status(200).json({ success: true, message: "File uploaded successfully!" });
+})
+
 
 
 //listen server

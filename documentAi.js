@@ -79,7 +79,7 @@ async function documentAi(filePath) {
 			type += `${paragraphText}`;
 		}
 		type += "Text extraction from invoice ends here...";
-		fs.writeFile("./output.txt", type);
+		// fs.writeFile("./output.txt", type);
 		console.log("SUCCESS...");
 		return type;
 	} catch (error) {
