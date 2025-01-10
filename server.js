@@ -9,6 +9,11 @@ app.use(express.json());
 app.use(cors());
 app.use("/uploads",express.static("uploads"))
 const mongoose = require("mongoose");
+const fs = require("fs");
+const path = require("path");
+
+
+
 const PORT = process.env.PORT || 8000;
 connectDB();
 const storage = multer.diskStorage({
@@ -57,16 +62,54 @@ app.post("/upload", upload.single("file"), async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to upload file.", error });
   }
 });
- 
+app.post("/delete-upload", async (req, res) => {
+  const idToDelete = req.body.pdf;
+
+  try {
+    // Find the document in the database to get the file name
+    const pdfRecord = await PdfSchema.findById(idToDelete);
+
+    if (!pdfRecord) {
+      return res.status(404).json({ status: "error", message: "File not found in the database." });
+    }
+
+    // Get the file path
+    const filePath = path.join(__dirname, "uploads", pdfRecord.pdf);
+
+    // Delete the file from the filesystem
+    fs.unlink(filePath, (err) => {
+      if (err) {
+        console.error("Error deleting file from uploads folder:", err);
+        return res.status(500).json({ status: "error", message: "Failed to delete file from server." });
+      }
+
+      // Delete the document from the database
+      PdfSchema.deleteOne({ _id: idToDelete })
+        .then(() => {
+          console.log("File and database record deleted successfully.");
+          res.send({ status: "ok", message: "File deleted successfully." });
+        })
+        .catch((dbErr) => {
+          console.error("Error deleting document from database:", dbErr);
+          res.status(500).send({ status: "error", message: "Error deleting file from database." });
+        });
+    });
+  } catch (error) {
+    console.error("Error handling delete-upload request:", error);
+    res.status(500).send({ status: "error", message: "Error deleting file." });
+  }
+});
+
 app.get("/get-uploads",async(req,res)=>{
   try{
 PdfSchema.find({}).then((data)=>{
   res.send({status:"ok",data:data})
 });
   }catch(e){
-
+console.log(e)
   }
 })
+
 
 
 
