@@ -82,14 +82,10 @@ app.post("/delete-upload", async (req, res) => {
     }
 
     // Get the file path
-    const filePath = path.join(__dirname, "uploads", pdfRecord.pdf);
+    // const filePath = path.join(__dirname, "uploads", pdfRecord.pdf);
 
     // Delete the file from the filesystem
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error("Error deleting file from uploads folder:", err);
-        return res.status(500).json({ status: "error", message: "Failed to delete file from server." });
-      }
+
 
       // Delete the document from the database
       PdfSchema.deleteOne({ _id: idToDelete })
@@ -101,7 +97,6 @@ app.post("/delete-upload", async (req, res) => {
           console.error("Error deleting document from database:", dbErr);
           res.status(500).send({ status: "error", message: "Error deleting file from database." });
         });
-    });
   } catch (error) {
     console.error("Error handling delete-upload request:", error);
     res.status(500).send({ status: "error", message: "Error deleting file." });
