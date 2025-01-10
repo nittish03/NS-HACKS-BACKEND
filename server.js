@@ -11,6 +11,7 @@ app.use("/uploads",express.static("uploads"))
 const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
+const documentAi = require("./documentAi.js")
 
 
 
@@ -42,24 +43,31 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ success: false, message: "No file uploaded." });
   }
+  
   const type=(req.file.mimetype.split("/")[1])
   const title = req.body.title;
   const fileName = req.file.filename; // Ensure this field exists in req.file
+  const filePath = req.file.path
+
+
   try {
-    await PdfSchema.create({
+    const result = await documentAi(filePath);
+
+    const pdf = await PdfSchema.create({
       title:title,
       pdf:fileName,
-      type:type
+      type:type,
+      result:result
     }); 
     
     // Respond with success message
     console.log("success");
-    return res.status(200).json({ success: true, message: "File uploaded successfully!" });
+    return res.status(200).json({ success: true, message: "File uploaded successfully!",data:pdf });
   } catch (error) {
     console.error(error);
 
     // Respond with error message
-    return res.status(500).json({ success: false, message: "Failed to upload file.", error });
+    return res.status(500).json({ success: false, message: "Failed to upload and documentai file.", error });
   }
 });
 app.post("/delete-upload", async (req, res) => {
@@ -110,28 +118,46 @@ console.log(e)
   }
 })
 
-const documentAi = require("./documentAi.js")
-app.post(
-	"/documentai",
-	upload.fields([
-		{
-			name: "bill",
-			maxCount: 1,
-		},
-	]),
-	async (req, res) => {
-		const filePath = req.files.bill[0].path;
-		console.log(filePath);
+app.post("/get-single-upload", async (req, res) => {
+  try {
+    const id = req.body.id; // Extract the id from the request body
+    const data = await PdfSchema.findById(id);
 
-    await documentAi(filePath)
-      .then((result) => {
-        res.send({ status: "ok", data: result });
-      })
-      .catch((error) => {
-        console.log("error occured while extracting via document AI... :", error);
- });
-	}
-);
+    if (!data) {
+      return res.status(404).send({ status: "error", message: "Document not found" });
+    }
+
+    res.send({ status: "ok", data: data });
+  } catch (error) {
+    console.error("Error fetching document by ID:", error);
+    res.status(500).send({ status: "error", message: "Internal server error" });
+  }
+});
+
+
+
+// app.post(
+//   "/documentai",
+//   upload.single("bill"), // Handle single file uploads for the field "bill"
+//   async (req, res) => {
+//     try {
+//       if (!req.file) {
+//         return res.status(400).send({ error: "No file uploaded" });
+//       }
+
+//       const filePath = req.file.path;
+//       console.log(filePath);
+
+//       const result = await documentAi(filePath);
+//       console.log("result :  ", result);
+//       console.log("success")
+//       res.send({ status: "ok", data: result });
+//     } catch (error) {
+//       console.error("Error occurred while extracting via Document AI:", error);
+//       res.status(500).send({ error: "Internal server error" });
+//     }
+//   }
+// );
 
 
 //listen server

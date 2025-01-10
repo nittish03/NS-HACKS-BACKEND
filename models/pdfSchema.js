@@ -4,6 +4,7 @@ const PdfDetailsSchema = new mongoose.Schema({
     pdf: String,
     title: String,
     type:String,
+    result:String,
     dateUploaded: {
         type: String, // Store the date as a string in "YYYY-MM-DD" format
         default: () => {
