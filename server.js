@@ -51,7 +51,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
 
 
   try {
-    const result = await documentAi(filePath);
+    const result = await documentAi(filePath,type);
 
     const pdf = await PdfSchema.create({
       title:title,
@@ -97,7 +97,7 @@ app.post("/delete-upload", async (req, res) => {
           console.error("Error deleting document from database:", dbErr);
           res.status(500).send({ status: "error", message: "Error deleting file from database." });
         });
-  } catch (error) {
+  } catch (error) { 
     console.error("Error handling delete-upload request:", error);
     res.status(500).send({ status: "error", message: "Error deleting file." });
   }
