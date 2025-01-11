@@ -48,7 +48,7 @@ app.post("/upload", upload.single("file"), async (req, res) => {
   const title = req.body.title;
   const fileName = req.file.filename; // Ensure this field exists in req.file
   const filePath = req.file.path;
-  const password = req.body.password
+  // const password = req.body.password
 
 
   try {
@@ -58,8 +58,8 @@ app.post("/upload", upload.single("file"), async (req, res) => {
       title:title,
       pdf:fileName,
       type:type,
-      result:result,
-      password:password,
+      result:result
+      // password:password,
     }); 
     
     // Respond with success message
