@@ -1,101 +1,93 @@
-const {DocumentProcessorServiceClient} = require('@google-cloud/documentai').v1;
-  const fs = require('fs').promises;
-const dotenv = require("dotenv").config()
+const { DocumentProcessorServiceClient } = require("@google-cloud/documentai").v1;
+const fs = require("fs").promises;
+const dotenv = require("dotenv").config();
 
 const projectId = process.env.PROJECT_ID;
 const location = process.env.LOCATION;
 const processorId = process.env.PROCESSOR_ID;
+const credentialsPath = "./gcp-credentials.json";
 
+/**
+ * Ensures the GCP credentials file exists.
+ */
+async function ensureCredentialsFile() {
+    try {
+        await fs.access(credentialsPath);
+        console.log("✅ Credentials file already exists.");
+    } catch (error) {
+        console.log("🔹 Creating credentials file...");
+        if (!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+            throw new Error("❌ GOOGLE_APPLICATION_CREDENTIALS_JSON is missing in environment variables.");
+        }
+        await fs.writeFile(credentialsPath, process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+    }
+}
+
+/**
+ * Processes a document using Google Cloud Document AI.
+ * @param {string} filePath - Path to the file to be processed.
+ * @param {string} type - File type (pdf, jpg, png, etc.).
+ * @returns {Promise<string>} Extracted text from the document.
+ */
 async function documentAi(filePath, type) {
-	try {
-	  const credentialsPath = "./gcp-credentials.json";
-	  await fs.writeFile(credentialsPath, process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
-  
-	  // Step 2: Set Environment Variable for Authentication
-	  process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-  
-	  // Instantiates a client
-	  const client = new DocumentProcessorServiceClient();
-  
-	  // The full resource name of the processor
-	  const name = `projects/${projectId}/locations/${location}/processors/${processorId}`;
-  
-	  // Read the file into memory.
-	  const imageFile = await fs.readFile(filePath);
-	  console.log("imageFile : ", imageFile);
-  
-	  // Convert the image data to a Buffer and base64 encode it.
-	  const encodedImage = Buffer.from(imageFile).toString("base64");
-  
-	  const mimeTypeMap = {
-		pdf: "application/pdf",
-		jpg: "image/jpeg",
-		jpeg: "image/jpeg",
-		png: "image/png",
-		webp: "image/webp",
-		html: "text/html",
-	  };
-	  
-	  const fileMimeType = mimeTypeMap[type.toLowerCase()];
-	  if (!fileMimeType) {
-		throw new Error(`Unsupported file type: ${type}`);
-	  }
-	  
-	  const request = {
-		name,
-		rawDocument: {
-		  content: encodedImage,
-		  mimeType: fileMimeType,
-		},
-	  };
-  
-	  // Recognizes text entities in the PDF document
-	  const [result] = await client.processDocument(request);
-	  const { document } = result;
-  
-	  // Get all of the document text as one big string
-	  const { text } = document;
-  
-	  // Extract shards from the text field
-	  const getText = (textAnchor) => {
-		if (!textAnchor.textSegments || textAnchor.textSegments.length === 0) {
-		  return "";
-		}
-		const startIndex = textAnchor.textSegments[0].startIndex || 0;
-		const endIndex = textAnchor.textSegments[0].endIndex;
-  
-		return text.substring(startIndex, endIndex);
-	  };
-  
-	  // Read the text recognition output from the processor
-	  let extractedText = "";
-	  extractedText += "Text extraction from invoice starts here...\n";
-	  const [page1] = document.pages;
-	  const { paragraphs } = page1;
-  
-	  for (const paragraph of paragraphs) {
-		const paragraphText = getText(paragraph.layout.textAnchor);
-		extractedText += `${paragraphText}`;
-	  }
-	  extractedText += "Text extraction from invoice ends here...";
-	  console.log("SUCCESS...");
-	  return extractedText;
-	} catch (error) {
-	  console.log("Error while processing document:");
-	  throw error;
-	}
-  }
+    try {
+        // Ensure credentials are set up
+        await ensureCredentialsFile();
+        process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
 
-// documentAi("./uploads/1736515617958-WhatsApp Image 2025-01-10 at 17.35.49_5cad9f95.jpg")
-// 	.then((result) => {
-// 		fs.writeFile(
-// 			"./output.txt",
-// 			`${result}\n\n\t\t\t- - Document AI extraction output - - \n`
-// 		);
-// 	})
-// 	.catch((error) => {
-// 		console.log("error occured while extracting via document AI... :", error);
-// 	});
+        // Instantiate a client
+        const client = new DocumentProcessorServiceClient();
+
+        // Define processor resource name
+        const name = `projects/${projectId}/locations/${location}/processors/${processorId}`;
+
+        // Read the file into memory
+        const imageFile = await fs.readFile(filePath);
+        console.log("📄 File read successfully.");
+
+        // Convert image data to base64
+        const encodedImage = Buffer.from(imageFile).toString("base64");
+
+        // Supported MIME types
+        const mimeTypeMap = {
+            pdf: "application/pdf",
+            jpg: "image/jpeg",
+            jpeg: "image/jpeg",
+            png: "image/png",
+            webp: "image/webp",
+            html: "text/html",
+        };
+
+        const fileMimeType = mimeTypeMap[type.toLowerCase()];
+        if (!fileMimeType) throw new Error(`❌ Unsupported file type: ${type}`);
+
+        // Prepare API request
+        const request = {
+            name,
+            rawDocument: { content: encodedImage, mimeType: fileMimeType },
+        };
+
+        console.log("🔄 Sending request to Document AI...");
+        const [result] = await client.processDocument(request);
+        const { document } = result;
+
+        // Extract text from document
+        const { text } = document;
+
+        console.log("✅ Text extraction successful.");
+        return text;
+    } catch (error) {
+        console.error("❌ Error while processing document:", error);
+        throw error;
+    }
+}
+
+// Example Usage
+// documentAi("./uploads/sample.jpg", "jpg")
+//     .then((result) => {
+//         return fs.writeFile("./output.txt", `${result}\n\n\t- - Document AI Extraction Output - -\n`);
+//     })
+//     .then(() => console.log("✅ Output saved to output.txt"))
+//     .catch((error) => console.log("❌ Error:", error));
 
 module.exports = documentAi;
-
